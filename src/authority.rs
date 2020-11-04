@@ -1,5 +1,5 @@
 use crate::servicer::Servicer;
-use crate::utils::{hash_sha256, generate_public_key};
+use crate::utils::{generate_public_key, hash_sha256};
 
 use k256::{EncodedPoint, NonZeroScalar, ProjectivePoint};
 use num_bigint::BigUint;
@@ -7,33 +7,35 @@ use rand::{CryptoRng, RngCore};
 
 pub struct Authority {
     pub s: NonZeroScalar,
-    pub PK: EncodedPoint
+    pub PK: EncodedPoint,
 }
 
 impl Authority {
-    pub fn random(mut rng: impl CryptoRng + RngCore) -> Self {
+    pub fn random(rng: impl CryptoRng + RngCore) -> Self {
         let s = NonZeroScalar::random(rng);
-        let pk = generate_public_key(&s);
+        let PK = generate_public_key(&s);
 
-        Self {
-            s: s,
-            PK: pk
-        }
+        Self { s: s, PK: PK }
+    }
+
+    pub fn register_servicer(&self, id: u8, rng: impl CryptoRng + RngCore) -> Servicer {
+        let register = ServicerRegister::random(self.s, id, rng);
+        register.register()
     }
 }
 
-pub struct ServicerRegistration {
+pub struct ServicerRegister {
     id: u8,
     r: NonZeroScalar,
-    s: NonZeroScalar
+    s: NonZeroScalar,
 }
 
-impl ServicerRegistration {
-    pub fn random(s: NonZeroScalar, id: u8, mut rng: impl CryptoRng + RngCore) -> Self {
-        ServicerRegistration {
+impl ServicerRegister {
+    pub fn random(s: NonZeroScalar, id: u8, rng: impl CryptoRng + RngCore) -> Self {
+        Self {
             id: id,
             s: s,
-            r: NonZeroScalar::random(rng)
+            r: NonZeroScalar::random(rng),
         }
     }
 
@@ -57,7 +59,7 @@ impl ServicerRegistration {
         Servicer {
             id: self.id,
             R: R,
-            S: S
+            S: S,
         }
     }
 }
@@ -68,12 +70,10 @@ fn test_generate_authority() {
     Authority::random(rng);
 }
 
-
 #[test]
 fn test_register_servicer() {
     let rng = rand::thread_rng();
-    let authority = Authority::random(rng);
 
-    let registration = ServicerRegistration::random(authority.s, 10, rng);
-    registration.register();
+    let authority = Authority::random(rng);
+    authority.register_servicer(10, rng);
 }

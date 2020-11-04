@@ -1,4 +1,4 @@
-use crate::utils::{hash_sha256, generate_public_key};
+use crate::utils::{generate_public_key, hash_sha256};
 use k256::{EncodedPoint, Scalar};
 use num_bigint::BigUint;
 use rand::{CryptoRng, RngCore};
