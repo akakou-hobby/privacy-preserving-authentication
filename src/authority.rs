@@ -1,14 +1,13 @@
 use crate::servicer::Servicer;
-use crate::utils::{generate_public_key, hash_sha256, scalar_to_biguint, biguint_to_scalar};
+use crate::utils::{biguint_to_scalar, generate_public_key, hash_sha256};
 
-use k256::{EncodedPoint, NonZeroScalar, ProjectivePoint};
-use num_bigint::BigUint;
+use k256::{EncodedPoint, NonZeroScalar};
 use rand::{CryptoRng, RngCore};
 
 #[derive(Clone)]
 pub struct Authority {
     pub s: NonZeroScalar,
-    pub PK: EncodedPoint
+    pub PK: EncodedPoint,
 }
 
 impl Authority {
@@ -16,7 +15,7 @@ impl Authority {
         let s = NonZeroScalar::random(rng);
         let PK = generate_public_key(&s);
 
-        Self { s: s, PK: PK}
+        Self { s: s, PK: PK }
     }
 
     pub fn register_servicer(&self, id: u8, rng: &mut (impl CryptoRng + RngCore)) -> Servicer {
@@ -28,7 +27,7 @@ impl Authority {
 pub struct ServicerRegister {
     id: u8,
     r: NonZeroScalar,
-    authority: Authority
+    authority: Authority,
 }
 
 impl ServicerRegister {
@@ -36,7 +35,7 @@ impl ServicerRegister {
         Self {
             id: id,
             authority: authority,
-            r: NonZeroScalar::random(rng)
+            r: NonZeroScalar::random(rng),
         }
     }
 
@@ -62,7 +61,7 @@ impl ServicerRegister {
             R: R,
             S: S,
             PK: None,
-            PKas: self.authority.PK
+            PKas: self.authority.PK,
         }
     }
 }

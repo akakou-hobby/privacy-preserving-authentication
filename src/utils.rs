@@ -1,11 +1,10 @@
-use k256::{EncodedPoint, NonZeroScalar, ProjectivePoint, Secp256k1, Scalar};
+use k256::{EncodedPoint, NonZeroScalar, ProjectivePoint, Scalar, Secp256k1};
 use num_bigint::{BigUint, ToBigUint};
 use num_traits::cast::ToPrimitive;
 
+use elliptic_curve::ff::PrimeField;
 use rand::{CryptoRng, RngCore};
 use sha2::{Digest, Sha256};
-use elliptic_curve::ff::PrimeField;
-
 
 pub fn generate_public_key(secret_key: &NonZeroScalar) -> EncodedPoint {
     (ProjectivePoint::generator() * &**secret_key)

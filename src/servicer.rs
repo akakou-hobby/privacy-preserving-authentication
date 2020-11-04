@@ -1,16 +1,12 @@
-use crate::utils::{generate_public_key, hash_sha256, biguint_to_scalar, scalar_to_biguint};
-use k256::{EncodedPoint, Scalar, ProjectivePoint, NonZeroScalar};
-use num_bigint::BigUint;
-// use elliptic_curve::{ FromDigest, ff::PrimeField };
-use sha2::{Digest, Sha256};
-use rand::{CryptoRng, RngCore};
+use crate::utils::{biguint_to_scalar, generate_public_key, hash_sha256};
+use k256::{EncodedPoint, NonZeroScalar, ProjectivePoint};
 
 pub struct Servicer {
     pub id: u8,
     pub R: EncodedPoint,
     pub S: NonZeroScalar,
     pub PK: Option<EncodedPoint>,
-    pub PKas: EncodedPoint
+    pub PKas: EncodedPoint,
 }
 
 impl Servicer {
@@ -18,7 +14,7 @@ impl Servicer {
         // left
         let left = generate_public_key(&self.S);
         let left = left.decode::<ProjectivePoint>().unwrap();
-        
+
         // right
         let mut hash = self.R.to_bytes().to_vec();
 
@@ -35,7 +31,7 @@ impl Servicer {
         println!("left. {:?}", left);
         println!("right. {:?}", right);
 
-        //  PKWS = SWS·P = RWS + H1(IDWS‖RWS)·PK
+        // check
         left == right
     }
 }
