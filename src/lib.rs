@@ -1,3 +1,2 @@
-mod utils;
 mod authenticator;
-
+mod utils;

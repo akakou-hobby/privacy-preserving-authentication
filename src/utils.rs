@@ -1,9 +1,9 @@
-use k256::{EncodedPoint, Secp256k1, NonZeroScalar, ProjectivePoint};
+use k256::{EncodedPoint, NonZeroScalar, ProjectivePoint, Secp256k1};
 use rand::{CryptoRng, RngCore};
 
 pub struct KeyPair {
     pub secret_key: NonZeroScalar,
-    pub public_key: EncodedPoint
+    pub public_key: EncodedPoint,
 }
 
 impl KeyPair {
@@ -15,7 +15,7 @@ impl KeyPair {
 
         Self {
             secret_key: secret_key,
-            public_key: public_key
+            public_key: public_key,
         }
     }
 }
