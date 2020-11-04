@@ -1,7 +1,11 @@
-use k256::{EncodedPoint, NonZeroScalar, ProjectivePoint, Secp256k1};
-use num_bigint::BigUint;
+use k256::{EncodedPoint, NonZeroScalar, ProjectivePoint, Secp256k1, Scalar};
+use num_bigint::{BigUint, ToBigUint};
+use num_traits::cast::ToPrimitive;
+
 use rand::{CryptoRng, RngCore};
 use sha2::{Digest, Sha256};
+use elliptic_curve::ff::PrimeField;
+
 
 pub fn generate_public_key(secret_key: &NonZeroScalar) -> EncodedPoint {
     (ProjectivePoint::generator() * &**secret_key)
@@ -15,6 +19,32 @@ pub fn hash_sha256(binary: &[u8]) -> BigUint {
     let hash = &hasher.finalize();
 
     BigUint::from_bytes_le(&hash.to_vec())
+}
+
+pub fn biguint_to_scalar(x: &BigUint) -> Scalar {
+    let bytes = biguint_to_bytes(x);
+    Scalar::from_repr(bytes.into()).unwrap()
+}
+
+pub fn scalar_to_biguint(scalar: &Scalar) -> Option<BigUint> {
+    Some(bytes_to_biguint(scalar.to_bytes().as_ref()))
+}
+
+pub fn bytes_to_biguint(bytes: &[u8; 32]) -> BigUint {
+    bytes
+        .iter()
+        .enumerate()
+        .map(|(i, w)| w.to_biguint().unwrap() << ((31 - i) * 8))
+        .sum()
+}
+
+fn biguint_to_bytes(x: &BigUint) -> [u8; 32] {
+    let mask = BigUint::from(u8::MAX);
+    let mut bytes = [0u8; 32];
+    for i in 0..32 {
+        bytes[i] = ((x >> ((31 - i) * 8)) as BigUint & &mask).to_u8().unwrap();
+    }
+    bytes
 }
 
 #[test]
