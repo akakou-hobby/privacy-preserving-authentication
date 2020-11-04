@@ -1,4 +1,4 @@
-mod authenticator;
+mod authority;
 mod servicer;
 
 mod utils;

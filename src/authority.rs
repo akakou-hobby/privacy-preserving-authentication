@@ -5,11 +5,11 @@ use k256::{NonZeroScalar, ProjectivePoint};
 use num_bigint::BigUint;
 use rand::{CryptoRng, RngCore};
 
-pub struct Authenticator {
+pub struct Authority {
     pub key_pair: KeyPair,
 }
 
-impl Authenticator {
+impl Authority {
     pub fn random(mut rng: impl CryptoRng + RngCore) -> Self {
         Self {
             key_pair: KeyPair::random(rng),
@@ -56,17 +56,17 @@ impl ServicerRegistration {
 }
 
 #[test]
-fn test_generate_authenticator() {
+fn test_generate_authority() {
     let mut rng = rand::thread_rng();
-    let authenticator = Authenticator::random(rng);
+    let authority = Authority::random(rng);
 }
 
 
 #[test]
 fn test_register_servicer() {
     let mut rng = rand::thread_rng();
-    let authenticator = Authenticator::random(rng);
+    let authority = Authority::random(rng);
 
     let registration = ServicerRegistration::random(10, rng);
-    registration.register(&authenticator.key_pair);
+    registration.register(&authority.key_pair);
 }
