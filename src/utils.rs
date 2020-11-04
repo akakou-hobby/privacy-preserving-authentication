@@ -1,25 +1,13 @@
 use k256::{EncodedPoint, NonZeroScalar, ProjectivePoint, Secp256k1};
-use num_bigint::BigUint;
 use rand::{CryptoRng, RngCore};
 use sha2::{Digest, Sha256};
+use num_bigint::BigUint;
 
-pub struct KeyPair {
-    pub secret_key: NonZeroScalar,
-    pub public_key: EncodedPoint,
-}
 
-impl KeyPair {
-    pub fn random(mut rng: impl CryptoRng + RngCore) -> Self {
-        let secret_key = NonZeroScalar::random(rng);
-        let public_key = (ProjectivePoint::generator() * &*secret_key)
-            .to_affine()
-            .into();
-
-        Self {
-            secret_key: secret_key,
-            public_key: public_key,
-        }
-    }
+pub fn generate_public_key(secret_key: &NonZeroScalar) -> EncodedPoint {
+    (ProjectivePoint::generator() * &**secret_key)
+        .to_affine()
+        .into()
 }
 
 pub fn hash_sha256(binary: &[u8]) -> BigUint {
@@ -31,9 +19,11 @@ pub fn hash_sha256(binary: &[u8]) -> BigUint {
 }
 
 #[test]
-fn test_generate_key_pair() {
+fn test_generate_public_key() {
     let mut rng = rand::thread_rng();
-    let key_pair = KeyPair::random(rng);
+    
+    let secret_key = NonZeroScalar::random(rng);
+    let public_key = generate_public_key(&secret_key);
 }
 
 #[test]
@@ -44,13 +34,10 @@ fn test_hash_sha256() {
 
     assert_eq!(
         result,
-        BigUint::from_bytes_le(
-            &hex!(
-                "
+        BigUint::from_bytes_le(&hex!(
+            "
     b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9
 "
-            )
-            .to_vec()
-        )
+        ).to_vec())
     );
 }

@@ -1,18 +1,23 @@
 use crate::servicer::Servicer;
-use crate::utils::{hash_sha256, KeyPair};
+use crate::utils::{hash_sha256, generate_public_key};
 
-use k256::{NonZeroScalar, ProjectivePoint};
+use k256::{EncodedPoint, NonZeroScalar, ProjectivePoint};
 use num_bigint::BigUint;
 use rand::{CryptoRng, RngCore};
 
 pub struct Authority {
-    pub key_pair: KeyPair,
+    pub s: NonZeroScalar,
+    pub PK: EncodedPoint
 }
 
 impl Authority {
     pub fn random(mut rng: impl CryptoRng + RngCore) -> Self {
+        let s = NonZeroScalar::random(rng);
+        let pk = generate_public_key(&s);
+
         Self {
-            key_pair: KeyPair::random(rng),
+            s: s,
+            PK: pk
         }
     }
 }
@@ -20,53 +25,55 @@ impl Authority {
 pub struct ServicerRegistration {
     id: u8,
     r: NonZeroScalar,
+    s: NonZeroScalar
 }
 
 impl ServicerRegistration {
-    pub fn random(id: u8, mut rng: impl CryptoRng + RngCore) -> Self {
+    pub fn random(s: NonZeroScalar, id: u8, mut rng: impl CryptoRng + RngCore) -> Self {
         ServicerRegistration {
             id: id,
-            r: NonZeroScalar::random(rng),
+            s: s,
+            r: NonZeroScalar::random(rng)
         }
     }
 
-    pub fn register(&self, key_pair: &KeyPair) -> Servicer {
-        let public_key = (ProjectivePoint::generator() * &*self.r).to_affine().into();
+    pub fn register(&self) -> Servicer {
+        let R = generate_public_key(&self.s);
 
-        let mut hash = key_pair.public_key.to_bytes().to_vec();
+        let mut hash = R.to_bytes().to_vec();
         hash.push(00 as u8);
         hash.push(self.id as u8);
 
         let hash = hash_sha256(&hash);
 
-        let s = key_pair.secret_key.invert().unwrap().truncate_to_u32();
-        let s = BigUint::from(s);
-
         let r = self.r.invert().unwrap().truncate_to_u32();
         let r = BigUint::from(r);
 
-        let private_key = r + hash * s;
+        let S = self.s.invert().unwrap().truncate_to_u32();
+        let S = BigUint::from(S);
+
+        let S = r + hash * S;
 
         Servicer {
             id: self.id,
-            r: public_key,
-            s: private_key,
+            R: R,
+            S: S
         }
     }
 }
 
 #[test]
 fn test_generate_authority() {
-    let mut rng = rand::thread_rng();
-    let authority = Authority::random(rng);
+    let rng = rand::thread_rng();
+    Authority::random(rng);
 }
 
 
 #[test]
 fn test_register_servicer() {
-    let mut rng = rand::thread_rng();
+    let rng = rand::thread_rng();
     let authority = Authority::random(rng);
 
-    let registration = ServicerRegistration::random(10, rng);
-    registration.register(&authority.key_pair);
+    let registration = ServicerRegistration::random(authority.s, 10, rng);
+    registration.register();
 }
