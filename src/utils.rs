@@ -1,5 +1,6 @@
 use k256::{EncodedPoint, NonZeroScalar, ProjectivePoint, Secp256k1};
 use rand::{CryptoRng, RngCore};
+use sha2::{Digest, Sha256};
 
 pub struct KeyPair {
     pub secret_key: NonZeroScalar,
@@ -20,8 +21,32 @@ impl KeyPair {
     }
 }
 
+pub fn hash_sha256(binary: &[u8]) -> Vec<u8> {
+    let mut hasher = Sha256::new();
+    hasher.update(binary);
+
+    let hash = &hasher.finalize();
+    hash.to_vec()
+}
+
 #[test]
 fn test_generate_key_pair() {
     let mut rng = rand::thread_rng();
     let key_pair = KeyPair::random(rng);
+}
+
+#[test]
+fn test_hash_sha256() {
+    use hex_literal::hex;
+
+    let result = hash_sha256(b"hello world");
+
+    assert_eq!(
+        result[..],
+        hex!(
+            "
+    b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9
+"
+        )[..]
+    );
 }
