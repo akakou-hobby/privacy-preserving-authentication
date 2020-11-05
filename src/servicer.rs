@@ -1,5 +1,5 @@
 use crate::utils::{biguint_to_scalar, generate_public_key, hash_sha256};
-use crate::user::AuthRequest;
+use crate::auth::{AuthRequest, AuthResponse};
 
 use k256::{EncodedPoint, NonZeroScalar, ProjectivePoint};
 use rand::{CryptoRng, RngCore};
@@ -38,7 +38,7 @@ impl Servicer {
         left == right
     }
 
-    pub fn auth(&self, req: &AuthRequest, rng: &mut (impl CryptoRng + RngCore)) -> NonZeroScalar {
+    pub fn auth(&self, req: &AuthRequest, rng: &mut (impl CryptoRng + RngCore)) -> AuthResponse {
         req.is_valid(&self.PKas);
         
         //  B = b·P
@@ -74,7 +74,9 @@ impl Servicer {
         let Ver = biguint_to_scalar(&Ver);
         let Ver = NonZeroScalar::new(Ver).unwrap();
 
-        Ver
+        AuthResponse {
+            Ver: Ver
+        }
     }
 }
 
