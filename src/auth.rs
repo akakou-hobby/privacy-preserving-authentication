@@ -1,6 +1,6 @@
 use crate::utils::{biguint_to_scalar, scalar_to_biguint, generate_public_key, hash_sha256};
 
-use k256::{EncodedPoint, NonZeroScalar, ProjectivePoint};
+use k256::{EncodedPoint, NonZeroScalar, ProjectivePoint, Scalar};
 use num_bigint::BigUint;
 use rand::{CryptoRng, RngCore};
 
@@ -13,7 +13,11 @@ pub struct AuthRequest {
 }
 
 pub struct AuthResponse {
-    pub Ver: NonZeroScalar
+    pub Ver: NonZeroScalar,
+    pub B: EncodedPoint,
+    pub id: u8, 
+    pub R: EncodedPoint,
+    pub PK: EncodedPoint
 }
 
 impl AuthRequest {
@@ -51,6 +55,22 @@ impl AuthRequest {
         let right = A + PKmu * Hmu;
 
         right == left
+    }
+}
+
+impl AuthResponse {
+    pub fn is_valid(&self, SK: &NonZeroScalar, A: &EncodedPoint) -> bool {
+        // H1(SKMU − WS‖A)
+        let mut A = A.to_bytes().to_vec(); 
+        
+        let mut hash = SK.to_bytes().to_vec();
+        hash.append(&mut A);
+
+        let hash = hash_sha256(&hash);
+        let hash = biguint_to_scalar(&hash);
+
+        let Ver : Scalar = *self.Ver.as_ref();
+        Ver == hash
     }
 }
 

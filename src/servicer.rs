@@ -13,7 +13,7 @@ pub struct Servicer {
 }
 
 impl Servicer {
-    pub fn is_valid(&self) -> bool {
+    pub fn is_valid(&mut self) -> bool {
         // left
         let left = generate_public_key(&self.S);
         let left = left.decode::<ProjectivePoint>().unwrap();
@@ -30,6 +30,9 @@ impl Servicer {
         let PKas = self.PKas.decode::<ProjectivePoint>().unwrap();
         let R = self.R.decode::<ProjectivePoint>().unwrap();
         let right = R + PKas * &*hash;
+        
+        let PK = right.to_affine().into();
+        self.PK = Some(PK);
 
         println!("left. {:?}", left);
         println!("right. {:?}", right);
@@ -56,7 +59,6 @@ impl Servicer {
         let mut K_bin : EncodedPoint = K.to_affine().into();
         let mut K_bin = K_bin.to_bytes().to_vec();
 
-        // SKWS − MU = H2(Ppid‖IDWS‖KWS − MU).
         let mut SK = req.P.to_bytes().to_vec();
         SK.append(&mut IDws_bin);
         SK.append(&mut K_bin);
@@ -75,7 +77,11 @@ impl Servicer {
         let Ver = NonZeroScalar::new(Ver).unwrap();
 
         AuthResponse {
-            Ver: Ver
+            Ver: Ver,
+            B: B,
+            id: self.id,
+            R: self.R,
+            PK: self.PK.unwrap()
         }
     }
 }
@@ -87,7 +93,7 @@ fn test_verify_servicer() {
     let mut rng = rand::thread_rng();
 
     let authority = Authority::random(rng);
-    let servicer = authority.register_servicer(10, &mut rng);
+    let mut servicer = authority.register_servicer(10, &mut rng);
 
     let result = servicer.is_valid();
     assert!(result);
@@ -102,7 +108,8 @@ fn test_verify_auth() {
     let mut rng = rand::thread_rng();
 
     let authority = Authority::random(rng);
-    let servicer = authority.register_servicer(10, &mut rng);
+    let mut servicer = authority.register_servicer(10, &mut rng);
+    servicer.is_valid();
 
     let mut rng = rand::thread_rng();
     let mut rng2 = rand::thread_rng();

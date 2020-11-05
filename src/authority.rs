@@ -139,11 +139,15 @@ impl UserRegister {
             PID: PID,
             PWV: PWV,
             PKas: self.authority.PK,
-            PK: None
+            PK: None,
+            S_dash: None,
+            a: None,
+            P: None,
+            SK: None,
+            A: None,
         }
     }
 }
-
 
 #[test]
 fn test_generate_authority() {

@@ -1,5 +1,5 @@
 use crate::utils::{biguint_to_scalar, scalar_to_biguint, generate_public_key, hash_sha256};
-use crate::auth::AuthRequest;
+use crate::auth::{AuthRequest, AuthResponse};
 
 use k256::{EncodedPoint, NonZeroScalar, ProjectivePoint};
 use num_bigint::BigUint;
@@ -12,7 +12,12 @@ pub struct User {
     pub PID: BigUint,
     pub PWV: NonZeroScalar,
     pub PKas: EncodedPoint,
-    pub PK: Option<EncodedPoint>
+    pub PK: Option<EncodedPoint>,
+    pub S_dash: Option<NonZeroScalar>,
+    pub a: Option<NonZeroScalar>,
+    pub P: Option<NonZeroScalar>,
+    pub SK: Option<NonZeroScalar>,
+    pub A: Option<EncodedPoint>
 }
 
 
@@ -47,10 +52,13 @@ impl User {
         left == right
     }
 
-    pub fn generate_auth_request(&self, ts: &BigUint, rng1: &mut (impl CryptoRng + RngCore), rng2: &mut (impl CryptoRng + RngCore)) -> AuthRequest {
+    pub fn generate_auth_request(&mut self, ts: &BigUint, rng1: &mut (impl CryptoRng + RngCore), rng2: &mut (impl CryptoRng + RngCore)) -> AuthRequest {
         // A = a·P
         let a = NonZeroScalar::random(rng1);
         let A = generate_public_key(&a);
+        
+        self.a = Some(a);
+        self.A = Some(A);
 
         let c = NonZeroScalar::random(rng2);
 
@@ -66,6 +74,7 @@ impl User {
 
         let P = c.as_ref() * &hash;
         let P = NonZeroScalar::new(P).unwrap();
+        self.P = Some(P);
 
         // R' = c·R
         let R_dash = self.R.decode::<ProjectivePoint>().unwrap();
@@ -94,6 +103,9 @@ impl User {
         let Ver = a.as_ref() + S_dash * H;
         let Ver = NonZeroScalar::new(Ver).unwrap();
 
+        let S_dash = NonZeroScalar::new(S_dash).unwrap();
+        self.S_dash = Some(S_dash);
+
         AuthRequest {
             P: P,
             R_dash: R_dash,
@@ -101,6 +113,34 @@ impl User {
             ts: ts.clone(),
             Ver: Ver
         }
+    }
+
+    pub fn calc_session_key(&mut self, res: &AuthResponse) {
+        // KWS − MU = S'MU·B + a·PKWS
+        let PKws = res.PK.decode::<ProjectivePoint>().unwrap();
+        let B = res.B.decode::<ProjectivePoint>().unwrap();
+        let S_dash = self.S_dash.unwrap().as_ref();
+        
+
+        let K : ProjectivePoint = B * self.S.as_ref() + PKws * self.a.unwrap().as_ref();
+
+        // SKMU − WS = H2(Ppid‖IDWS‖KMU − WS)
+        let mut IDws_bin = res.id.to_be_bytes().to_vec();
+        let mut K_bin : EncodedPoint = K.to_affine().into();
+        let mut K_bin = K_bin.to_bytes().to_vec();
+
+        let mut SK = self.P.unwrap().to_bytes().to_vec();
+        SK.append(&mut IDws_bin);
+        SK.append(&mut K_bin);
+
+        let SK = hash_sha256(&SK);
+        let SK = biguint_to_scalar(&SK);
+        let SK = NonZeroScalar::new(SK).unwrap();
+        
+        self.SK = Some(SK);
+
+        assert!(res.is_valid(&SK, &self.A.unwrap()));
+
     }
 }
 
