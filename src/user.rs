@@ -11,6 +11,7 @@ pub struct User {
     pub PID: BigUint,
     pub PWV: NonZeroScalar,
     pub PKas: EncodedPoint,
+    pub PK: Option<EncodedPoint>
 }
 
 pub struct AuthRequest {
@@ -22,7 +23,7 @@ pub struct AuthRequest {
 }
 
 impl User {
-    pub fn is_valid(&self) -> bool {
+    pub fn is_valid(&mut self) -> bool {
         // left
         let left = generate_public_key(&self.S);
         let left = left.decode::<ProjectivePoint>().unwrap();
@@ -41,6 +42,9 @@ impl User {
         let PKas = self.PKas.decode::<ProjectivePoint>().unwrap();
         let R = self.R.decode::<ProjectivePoint>().unwrap();
         let right = R + PKas * &*hash;
+
+        let PK: EncodedPoint = right.to_affine().into();
+        self.PK = Some(PK);
 
         // println!("left. {:?}", left);
         // println!("right. {:?}", right);
@@ -63,33 +67,38 @@ impl User {
         hash.append(&mut PID_bin);
 
         let hash = hash_sha256(&hash);
+        println!("{}", hash);
         let hash = biguint_to_scalar(&hash);
-        let hash = NonZeroScalar::new(hash).unwrap();
 
-        let P = c.as_ref() * hash.as_ref();
+        let P = c.as_ref() * &hash;
         let P = NonZeroScalar::new(P).unwrap();
 
         // R' = c·R
         let R_dash = self.R.decode::<ProjectivePoint>().unwrap();
-        let R_dash = R_dash * &*c;
+        let R_dash = R_dash * c.as_ref();
+        let R_dash: EncodedPoint = R_dash.to_affine().into();
 
         // S' = c·S
-        let S_dash = self.S.as_ref() * &*c;
+        let S_dash = self.S.as_ref() * c.as_ref();
      
-        // H = H(P||ts||R||A)
+        // H = H(P||ts||R'||A)
         let mut ts_bin = ts.to_bytes_be();
-        let mut R_bin = self.R.to_bytes().to_vec();
+        let mut R_dash_bin = R_dash.to_bytes().to_vec();
         let mut A_bin = A.to_bytes().to_vec();
         
-        let mut H = scalar_to_biguint(&P).unwrap().to_bytes_be();
-        H.append(&mut ts_bin);
-        H.append(&mut R_bin);
-        H.append(&mut A_bin);
-        
-        let Ver = a.as_ref() + S_dash;
-        let Ver = NonZeroScalar::new(Ver).unwrap();
+        let mut H = P.to_bytes().to_vec();
 
-        let R_dash = R_dash.to_affine().into();
+        H.append(&mut ts_bin);
+        H.append(&mut R_dash_bin);
+        H.append(&mut A_bin);
+
+        let H = hash_sha256(&H);
+        println!("{}", H);
+        let H = biguint_to_scalar(&H);
+
+        // Ver = a + S'·H
+        let Ver = a.as_ref() + S_dash * H;
+        let Ver = NonZeroScalar::new(Ver).unwrap();
 
         AuthRequest {
             P: P,
@@ -98,6 +107,40 @@ impl User {
             ts: ts.clone(),
             Ver: Ver
         }
+    }
+}
+
+
+impl AuthRequest {
+    pub fn is_valid(&self, PKas: &EncodedPoint) -> bool {
+        // PKmu = R'mu + Ppid * PK
+        let PKas = PKas.decode::<ProjectivePoint>().unwrap();
+        let R__dash = self.R_dash.decode::<ProjectivePoint>().unwrap();
+        let PKmu = R__dash + PKas * &*self.P;
+
+        // H = H(P||ts||R||A)
+        let mut ts_bin = self.ts.to_bytes_be();
+        let mut R_dash_bin = self.R_dash.to_bytes().to_vec();
+        let mut A_bin = self.A.to_bytes().to_vec();
+        
+        let mut Hmu = self.P.to_bytes().to_vec();
+        Hmu.append(&mut ts_bin);
+        Hmu.append(&mut R_dash_bin);
+        Hmu.append(&mut A_bin);
+
+        let Hmu = hash_sha256(&Hmu);
+        println!("{}", Hmu);
+        let Hmu = biguint_to_scalar(&Hmu);
+        
+        // VerMU·P = A + PKMU·HMU 
+        let left = generate_public_key(&self.Ver)
+                .decode::<ProjectivePoint>()
+                .unwrap();
+
+        let A = self.A.decode::<ProjectivePoint>().unwrap();
+        let right = A + PKmu * Hmu;
+
+        right == left
     }
 }
 
@@ -111,7 +154,7 @@ fn test_verify_user() {
     let h = BigUint::from(10 as u32);
 
     let authority = Authority::random(rng);
-    let user = authority.register_user(id, h, &mut rng);
+    let mut user = authority.register_user(id, h, &mut rng);
 
     let result = user.is_valid();
     assert!(result);
@@ -128,9 +171,11 @@ fn test_generate_auth_request() {
     let h = BigUint::from(10 as u32);
 
     let authority = Authority::random(rng);
-    let user = authority.register_user(id, h, &mut rng);
+    let mut user = authority.register_user(id, h, &mut rng);
 
     let ts = BigUint::from(10 as u32);
-    let result = user.generate_auth_request(&ts, &mut rng, &mut rng2);
-}
+    let request = user.generate_auth_request(&ts, &mut rng, &mut rng2);
 
+    let result = request.is_valid(&authority.PK);
+    assert!(result);
+}

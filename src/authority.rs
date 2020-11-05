@@ -112,6 +112,7 @@ impl UserRegister {
         hash2.append(&mut PID_bin);
 
         let hash2 = hash_sha256(&hash2);
+        println!("{}", hash2);
         let hash2 = biguint_to_scalar(&hash2);
 
         let r = r.as_ref();
@@ -137,7 +138,8 @@ impl UserRegister {
             S: S,
             PID: PID,
             PWV: PWV,
-            PKas: self.authority.PK
+            PKas: self.authority.PK,
+            PK: None
         }
     }
 }
