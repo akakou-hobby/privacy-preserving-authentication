@@ -148,27 +148,3 @@ impl UserRegister {
         }
     }
 }
-
-#[test]
-fn test_generate_authority() {
-    let rng = rand::thread_rng();
-    Authority::random(rng);
-}
-
-#[test]
-fn test_register_servicer() {
-    let mut rng = rand::thread_rng();
-
-    let authority = Authority::random(rng);
-    authority.register_servicer(10, &mut rng);
-}
-
-#[test]
-fn test_register_user() {
-    let mut rng = rand::thread_rng();
-
-    let id = BigUint::from(10 as u32);
-    let h = BigUint::from(10 as u32);
-    let authority = Authority::random(rng);
-    authority.register_user(id, h, &mut rng);
-}
