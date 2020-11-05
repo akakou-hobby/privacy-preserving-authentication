@@ -112,11 +112,16 @@ impl User {
 
 
 impl AuthRequest {
-    pub fn is_valid(&self, PKas: &EncodedPoint) -> bool {
-        // PKmu = R'mu + Ppid * PK
+    pub fn calc_PKmu(&self, PKas: &EncodedPoint) -> ProjectivePoint { 
         let PKas = PKas.decode::<ProjectivePoint>().unwrap();
         let R__dash = self.R_dash.decode::<ProjectivePoint>().unwrap();
-        let PKmu = R__dash + PKas * &*self.P;
+
+        R__dash + PKas * &*self.P
+    }
+    
+    pub fn is_valid(&self, PKas: &EncodedPoint) -> bool {
+        // PKmu = R'mu + Ppid * PK
+        let PKmu = self.calc_PKmu(PKas);
 
         // H = H(P||ts||R||A)
         let mut ts_bin = self.ts.to_bytes_be();

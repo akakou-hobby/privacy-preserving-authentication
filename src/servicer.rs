@@ -2,6 +2,7 @@ use crate::utils::{biguint_to_scalar, generate_public_key, hash_sha256};
 use crate::user::AuthRequest;
 
 use k256::{EncodedPoint, NonZeroScalar, ProjectivePoint};
+use rand::{CryptoRng, RngCore};
 
 pub struct Servicer {
     pub id: u8,
@@ -37,8 +38,43 @@ impl Servicer {
         left == right
     }
 
-    pub fn auth(&self, req: &AuthRequest) {
-        assert!(req.is_valid(&self.PKas));
+    pub fn auth(&self, req: &AuthRequest, rng: &mut (impl CryptoRng + RngCore)) -> NonZeroScalar {
+        req.is_valid(&self.PKas);
+        
+        //  B = b·P
+        let b = NonZeroScalar::random(rng);
+        let B = generate_public_key(&b);
+
+        // KWS − MU = SWS·A + b·PKM
+        let A = req.A.decode::<ProjectivePoint>().unwrap();
+        let PKmu = req.calc_PKmu(&self.PKas);
+        
+        let K : ProjectivePoint = A * self.S.as_ref() + PKmu * b.as_ref();
+
+        // SKWS − MU = H2(Ppid‖IDWS‖KWS − MU)
+        let mut IDws_bin = self.id.to_be_bytes().to_vec();
+        let mut K_bin : EncodedPoint = K.to_affine().into();
+        let mut K_bin = K_bin.to_bytes().to_vec();
+
+        // SKWS − MU = H2(Ppid‖IDWS‖KWS − MU).
+        let mut SK = req.P.to_bytes().to_vec();
+        SK.append(&mut IDws_bin);
+        SK.append(&mut K_bin);
+
+        let SK = hash_sha256(&SK);
+        let SK = biguint_to_scalar(&SK);
+
+        //  VerWS = H1(SKWS − MU‖A) 
+        let A_bin : EncodedPoint = A.to_affine().into();
+        let mut A_bin = A_bin.to_bytes().to_vec();
+        let mut Ver = SK.to_bytes().to_vec();
+        Ver.append(&mut A_bin);
+
+        let Ver = hash_sha256(&Ver);
+        let Ver = biguint_to_scalar(&Ver);
+        let Ver = NonZeroScalar::new(Ver).unwrap();
+
+        Ver
     }
 }
 
@@ -57,7 +93,7 @@ fn test_verify_servicer() {
 
 
 #[test]
-fn test_verify_auth_request() {
+fn test_verify_auth() {
     use num_bigint::BigUint;
     use crate::authority::Authority;
 
@@ -81,5 +117,7 @@ fn test_verify_auth_request() {
     println!("{}", req.is_valid(&authority.PK));
     println!("{}", req.is_valid(&servicer.PKas));
 
-    servicer.auth(&req);
+    let mut rng3 = rand::thread_rng();
+
+    let VerWS = servicer.auth(&req, &mut rng3);
 }
