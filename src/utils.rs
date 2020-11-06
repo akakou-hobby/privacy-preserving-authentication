@@ -1,9 +1,8 @@
-use k256::{EncodedPoint, NonZeroScalar, ProjectivePoint, Scalar, Secp256k1};
+use k256::{EncodedPoint, NonZeroScalar, ProjectivePoint, Scalar};
 use num_bigint::{BigUint, ToBigUint};
 use num_traits::cast::ToPrimitive;
 
 use elliptic_curve::ff::PrimeField;
-use rand::{CryptoRng, RngCore};
 use sha2::{Digest, Sha256};
 
 pub fn generate_public_key(secret_key: &NonZeroScalar) -> EncodedPoint {
