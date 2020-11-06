@@ -10,6 +10,7 @@ pub struct Servicer {
     pub S: NonZeroScalar,
     pub PK: Option<EncodedPoint>,
     pub PKas: EncodedPoint,
+    pub SK: Option<NonZeroScalar>
 }
 
 impl Servicer {
@@ -41,7 +42,7 @@ impl Servicer {
         left == right
     }
 
-    pub fn auth(&self, req: &AuthRequest, rng: &mut (impl CryptoRng + RngCore)) -> AuthResponse {
+    pub fn auth(&mut self, req: &AuthRequest, rng: &mut (impl CryptoRng + RngCore)) -> AuthResponse {
         req.is_valid(&self.PKas);
         
         //  B = b·P
@@ -75,6 +76,8 @@ impl Servicer {
         let Ver = hash_sha256(&Ver);
         let Ver = biguint_to_scalar(&Ver);
         let Ver = NonZeroScalar::new(Ver).unwrap();
+
+        self.SK = NonZeroScalar::new(SK);
 
         AuthResponse {
             Ver: Ver,

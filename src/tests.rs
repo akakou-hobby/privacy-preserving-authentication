@@ -1,8 +1,10 @@
+use num_bigint::BigUint;
+use crate::authority::Authority;
+use k256::{EncodedPoint, NonZeroScalar, ProjectivePoint, Scalar, Secp256k1};
+
 
 #[test]
 fn test_auth() {
-    use num_bigint::BigUint;
-    use crate::authority::Authority;
 
     let mut rng = rand::thread_rng();
 
@@ -28,4 +30,12 @@ fn test_auth() {
     let mut rng3 = rand::thread_rng();
 
     let VerWS = servicer.auth(&req, &mut rng3);
+    user.calc_session_key(&VerWS);
+
+    let SKMU : NonZeroScalar = user.SK.unwrap();
+    let SKWS : NonZeroScalar = servicer.SK.unwrap();
+
+    let SKMU : Scalar = *SKMU.as_ref();
+    let SKWS : Scalar = *SKWS.as_ref();
+    assert!(SKMU == SKWS)
 }

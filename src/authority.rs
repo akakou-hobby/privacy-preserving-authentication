@@ -70,6 +70,7 @@ impl ServicerRegister {
             S: S,
             PK: None,
             PKas: self.authority.PK,
+            SK: None
         }
     }
 }

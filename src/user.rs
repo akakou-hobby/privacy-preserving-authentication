@@ -119,10 +119,9 @@ impl User {
         // KWS − MU = S'MU·B + a·PKWS
         let PKws = res.PK.decode::<ProjectivePoint>().unwrap();
         let B = res.B.decode::<ProjectivePoint>().unwrap();
-        let S_dash = self.S_dash.unwrap().as_ref();
-        
+        let S_dash = self.S_dash.unwrap();
 
-        let K : ProjectivePoint = B * self.S.as_ref() + PKws * self.a.unwrap().as_ref();
+        let K : ProjectivePoint = B * S_dash.as_ref() + PKws * self.a.unwrap().as_ref();
 
         // SKMU − WS = H2(Ppid‖IDWS‖KMU − WS)
         let mut IDws_bin = res.id.to_be_bytes().to_vec();
@@ -140,6 +139,5 @@ impl User {
         self.SK = Some(SK);
 
         assert!(res.is_valid(&SK, &self.A.unwrap()));
-
     }
 }
