@@ -22,7 +22,7 @@ fn test_auth() {
 
     let req = user.generate_auth_request(&ts, &mut rng, &mut rng2);
 
-    let VerWS = servicer.auth(&req, &mut rng3);
+    let VerWS = servicer.auth(&req, &mut rng3).unwrap();
     user.calc_session_key(&VerWS);
 
     let SKMU: NonZeroScalar = user.SK.unwrap();

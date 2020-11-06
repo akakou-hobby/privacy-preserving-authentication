@@ -44,8 +44,10 @@ impl Servicer {
         &mut self,
         req: &AuthRequest,
         rng: &mut (impl CryptoRng + RngCore),
-    ) -> AuthResponse {
-        req.is_valid(&self.PKas);
+    ) -> Result<AuthResponse, ()> {
+        if !req.is_valid(&self.PKas) {
+            return Err(());
+        }
 
         let mut IDws_bin = self.id.to_be_bytes().to_vec();
         let mut P_bin = req.P.to_bytes().to_vec();
@@ -83,12 +85,12 @@ impl Servicer {
 
         self.SK = NonZeroScalar::new(SK);
 
-        AuthResponse {
+        Ok(AuthResponse {
             Ver: Ver,
             B: B,
             id: self.id,
             R: self.R,
             PK: self.PK.unwrap(),
-        }
+        })
     }
 }
