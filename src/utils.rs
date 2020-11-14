@@ -3,6 +3,7 @@ use num_bigint::{BigUint, ToBigUint};
 use num_traits::cast::ToPrimitive;
 
 use elliptic_curve::ff::PrimeField;
+use rand::SeedableRng;
 use sha2::{Digest, Sha256};
 
 pub fn generate_public_key(secret_key: &NonZeroScalar) -> EncodedPoint {
@@ -47,7 +48,7 @@ fn biguint_to_bytes(x: &BigUint) -> [u8; 32] {
 
 #[test]
 fn test_generate_public_key() {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rngs::StdRng::from_seed([0; 32]);
 
     let secret_key = NonZeroScalar::random(rng);
     let public_key = generate_public_key(&secret_key);
